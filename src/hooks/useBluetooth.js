@@ -30,8 +30,17 @@ export function useBluetooth() {
   }, []);
 
   const connect = useCallback(async () => {
+    if (!window.isSecureContext) {
+      setError('HTTPS required for Bluetooth. Access via https:// not http://.');
+      return;
+    }
+    const isIOS = /ipad|iphone|ipod/i.test(navigator.userAgent);
+    if (isIOS) {
+      setError('Web Bluetooth is not supported on iOS. Use an Android device with Chrome.');
+      return;
+    }
     if (!navigator.bluetooth) {
-      setError('Web Bluetooth is not available. Use Chrome or Edge.');
+      setError('Web Bluetooth not available. Use Chrome or Edge on Android/Desktop.');
       return;
     }
 
