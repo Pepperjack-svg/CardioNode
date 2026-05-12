@@ -388,14 +388,42 @@ body {
 }
 
 .error-message {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
   color: var(--destructive);
   background-color: rgba(255, 160, 0, 0.1);
   padding: 1rem;
   border-radius: var(--radius);
   border: 1px solid var(--destructive);
-  text-align: center;
   margin-top: 1rem;
   font-family: var(--font-mono);
+}
+
+.error-close {
+  background: none;
+  border: none;
+  color: var(--destructive);
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.error-close:hover {
+  opacity: 1;
+}
+
+.waiting-label {
+  margin-top: 0.75rem;
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  color: var(--muted-foreground);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
 }
 
 @keyframes heartBeat {

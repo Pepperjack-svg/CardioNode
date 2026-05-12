@@ -1,9 +1,9 @@
 import React from 'react';
 import { useBluetooth } from '../hooks/useBluetooth';
-import { Heart, Bluetooth, BluetoothOff, Droplets } from 'lucide-react';
+import { Heart, Bluetooth, BluetoothOff, Droplets, X } from 'lucide-react';
 
 export default function Dashboard() {
-  const { hr, spo2, isConnected, isConnecting, error, connect, disconnect } = useBluetooth();
+  const { hr, spo2, isConnected, isConnecting, error, clearError, connect, disconnect } = useBluetooth();
 
   return (
     <div className="app-container">
@@ -54,6 +54,9 @@ export default function Dashboard() {
               <div className="metric-value">{hr || '--'}</div>
               <div className="metric-unit">BPM</div>
             </div>
+            {isConnected && hr === 0 && (
+              <div className="waiting-label">Place finger on sensor</div>
+            )}
           </div>
 
           <div className="card spo2-card">
@@ -68,10 +71,20 @@ export default function Dashboard() {
               <div className="metric-value">{spo2 || '--'}</div>
               <div className="metric-unit">%</div>
             </div>
+            {isConnected && spo2 === 0 && (
+              <div className="waiting-label">Place finger on sensor</div>
+            )}
           </div>
         </div>
 
-        {error && <div className="error-message">{error}</div>}
+        {error && (
+          <div className="error-message">
+            <span>{error}</span>
+            <button className="error-close" onClick={clearError} aria-label="Dismiss error">
+              <X size={16} />
+            </button>
+          </div>
+        )}
       </main>
     </div>
   );
