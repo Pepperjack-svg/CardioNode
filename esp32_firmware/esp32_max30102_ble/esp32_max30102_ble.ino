@@ -1,22 +1,9 @@
-// ── Pulse Monitor BLE Firmware ─────────────────────────────────
-// MAX30102 real sensor readings (HR + SpO2) over BLE.
-// Falls back to simulation if sensor not found.
-// Board: ESP32 Dev Module  |  Serial: 115200 baud
-// Partition: Huge APP (3MB No OTA/1MB SPIFFS)
-//
-// Wiring:
-//   MAX30102  →  ESP32
-//   VIN       →  3.3V
-//   GND       →  GND
-//   SDA       →  GPIO 23
-//   SCL       →  GPIO 22
-
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
 #include <Wire.h>
 #include <BLEDevice.h>
 #include <BLEServer.h>
-#include <BLEUtils.h>
+#include <BLEUtls.h>
 #include <BLE2902.h>
 #include "MAX30105.h"
 #include "heartRate.h"
@@ -35,7 +22,7 @@
 #define FINGER_OFF  4000UL
 
 // ── SpO2 sliding window ─────────────────────────────────────────
-#define WIN 50
+#define WIN 15
 static uint32_t irBuf[WIN];
 static uint32_t rdBuf[WIN];
 static uint8_t  winIdx  = 0;
@@ -187,9 +174,9 @@ void setup() {
   }
 
   if (sensorFound) {
-    particleSensor.setup(0x1F, 4, 2, 100, 411, 4096);
-    particleSensor.setPulseAmplitudeRed(0x1F);
-    particleSensor.setPulseAmplitudeIR(0x1F);
+    particleSensor.setup(0x18, 4, 2, 200, 411, 16384);
+    particleSensor.setPulseAmplitudeRed(0x18);
+    particleSensor.setPulseAmplitudeIR(0x18);
     lastBeat = millis();
     Serial.println("OK — LIVE SENSOR MODE");
   } else {
@@ -252,6 +239,9 @@ void loop() {
         continue;
       }
 
+      // ── Skip saturated samples — ADC overflow poisons algorithms
+      if (irVal >= 262000 || redVal >= 262000) continue;
+
       // ── HR: peak detection ────────────────────────────────────
       if (checkForBeat(irVal)) {
         long delta = millis() - lastBeat;
@@ -275,19 +265,21 @@ void loop() {
       winIdx = (winIdx + 1) % WIN;
       if (winIdx == 0) winFull = true;
 
-      // ── Send every 1.5s ───────────────────────────────────────
-      if (millis() - lastSend > 1500) {
+      // ── Send every 1s ─────────────────────────────────────────
+      if (millis() - lastSend > 1000) {
         lastSend = millis();
 
+        // HR: show after first valid beat
         uint8_t hrToSend = 0;
-        if (validRates >= 2 && beatAvg > 30) {
+        if (validRates >= 1 && beatAvg > 30) {
           hrToSend = (uint8_t)beatAvg;
         }
         if (hrToSend == 0 && fingerOn && lastSentHr > 0) {
           hrToSend = lastSentHr;
         }
 
-        uint8_t spo2Val = winFull ? calcSpO2() : 0;
+        // SpO2: calculate as soon as window has enough samples
+        uint8_t spo2Val = (winFull || winIdx >= 10) ? calcSpO2() : 0;
         if (spo2Val == 0 && fingerOn && lastSentSpo2 > 0) {
           spo2Val = lastSentSpo2;
         }
